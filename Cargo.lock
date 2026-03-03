@@ -672,7 +672,7 @@ dependencies = [
 
 [[package]]
 name = "symphoxy"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "hound",
  "itertools 0.14.0",

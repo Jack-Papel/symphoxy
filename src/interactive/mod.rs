@@ -43,6 +43,10 @@ impl InteractiveTui {
                 Mode::Live => InteractiveTui::handle_live_mode(&piece),
                 #[cfg(feature = "wav-output")]
                 Mode::File => InteractiveTui::handle_file_mode(&piece),
+                Mode::Display => {
+                    println!("{piece}");
+                    PlayResult::Continue
+                }
             };
 
             match result {
@@ -206,6 +210,7 @@ enum Mode {
     Live,
     #[cfg(feature = "wav-output")]
     File,
+    Display,
 }
 
 impl TuiSelectable for Mode {
@@ -231,6 +236,13 @@ impl TuiSelectable for Mode {
                         description: "Render music to a WAV file".to_string(),
                     },
                     Mode::File,
+                ),
+                (
+                    SelectionInfo {
+                        name: "Display".to_string(),
+                        description: "Display music information".to_string(),
+                    },
+                    Mode::Display,
                 ),
             ],
         }
