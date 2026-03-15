@@ -1,11 +1,3 @@
-use std::ops::Mul;
-
-/// Musical modes and scale implementations.
-///
-/// Contains implementations of various musical scales and modes
-/// (major, minor, dorian, lydian, etc.) in the 12-tone equal temperament system.
-pub mod modes;
-
 pub use modes::*;
 
 use crate::{
@@ -94,28 +86,6 @@ pub const A4: NotePitch = NotePitch(440.0);
 ///
 /// This is a common reference point for musical compositions.
 pub const C4: NotePitch = NotePitch(261.626);
-
-#[expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    reason = "Willing to accept some precision loss here"
-)]
-fn get_degree_with_pattern_and_root(degree: isize, root: NotePitch, pattern: [f64; 7]) -> NotePitch {
-    #[expect(clippy::arithmetic_side_effects, reason = "Manual overflow checking")]
-    let adjusted_degree = if degree > 0 { degree - 1 } else { degree };
-    let octave_power = adjusted_degree.div_euclid(7) as f64;
-
-    let mut interval_power = 0.0f64;
-    for &step_size in pattern.iter().take(adjusted_degree.rem_euclid(7) as usize) {
-        interval_power += step_size / 12.0
-    }
-
-    let factor = 2.0f64.powf(octave_power + interval_power);
-
-    let pitch = (root.0 as f64).mul(factor) as f32;
-
-    NotePitch(pitch)
-}
 
 /// A trait for 12-tone equal temperament pitch manipulation.
 ///
@@ -210,3 +180,192 @@ impl Tet12 for Chord {
         Chord::new(self.0.iter().map(|&note| note.semitone(change)))
     }
 }
+
+fn get_degree_with_pattern_and_root(degree: isize, root: NotePitch, intervals: &'static [Interval]) -> NotePitch {
+    #[expect(clippy::cast_possible_wrap, reason = "Only used internally, and correctly")]
+    let len = intervals.len() as isize;
+
+    #[expect(clippy::arithmetic_side_effects, reason = "Manual overflow checking")]
+    let adjusted_degree = if degree > 0 { degree - 1 } else { degree };
+    #[expect(clippy::cast_precision_loss, reason = "Precision loss impossible if len is properly sized")]
+    let octave_power = adjusted_degree.div_euclid(len) as f32;
+
+    let interval_power = intervals[adjusted_degree.rem_euclid(len) as usize].0 / 12.0;
+
+    let factor = 2.0f32.powf(octave_power + interval_power);
+
+    let pitch = root.0 * factor;
+
+    NotePitch(pitch)
+}
+
+macro_rules! implement_tet12_scale {
+    ($name:ident, $len:expr, $intervals:expr, $doc:expr) => {
+        #[doc = $doc]
+        pub struct $name(pub NotePitch);
+
+        impl $name {
+            const INTERVALS: [Interval; $len] = $intervals;
+        }
+
+        impl Scale for $name {
+            fn intervals() -> &'static [Interval] {
+                &Self::INTERVALS
+            }
+
+            fn get_degree(&self, degree: isize) -> NotePitch {
+                get_degree_with_pattern_and_root(degree, self.0, &Self::intervals())
+            }
+        }
+    };
+}
+
+/// Musical modes and scale implementations.
+///
+/// Contains implementations of various musical scales and modes
+/// (major, minor, dorian, lydian, etc.) in the 12-tone equal temperament system.
+pub mod modes {
+    use crate::scales::interval::Interval;
+    use crate::{scales::tet12::get_degree_with_pattern_and_root, NotePitch, Scale};
+
+    implement_tet12_scale!(
+        LydianScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MAJOR_SECOND,
+            Interval::MAJOR_THIRD,
+            Interval::AUGMENTED_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MAJOR_SIXTH,
+            Interval::MAJOR_SEVENTH
+        ],
+        "Lydian mode - a major-type scale with a raised 4th degree, creating a bright, dreamy sound."
+    );
+    implement_tet12_scale!(
+        MajorScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MAJOR_SECOND,
+            Interval::MAJOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MAJOR_SIXTH,
+            Interval::MAJOR_SEVENTH
+        ],
+        "Major scale - the most common Western scale, providing a happy, bright sound. Also known as Ionian mode."
+    );
+    implement_tet12_scale!(
+        MixolydianScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MAJOR_SECOND,
+            Interval::MAJOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MAJOR_SIXTH,
+            Interval::MINOR_SEVENTH
+        ],
+        "Mixolydian mode - a major-type scale with a flattened 7th degree."
+    );
+    implement_tet12_scale!(
+        DorianScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MAJOR_SECOND,
+            Interval::MINOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MAJOR_SIXTH,
+            Interval::MINOR_SEVENTH
+        ],
+        "Dorian mode - a minor-type scale with a raised 6th degree."
+    );
+    implement_tet12_scale!(
+        MinorScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MAJOR_SECOND,
+            Interval::MINOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MINOR_SIXTH,
+            Interval::MINOR_SEVENTH
+        ],
+        "Natural minor scale - provides a sad, melancholic sound. Also known as Aeolian mode."
+    );
+    implement_tet12_scale!(
+        PhrygianScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MINOR_SECOND,
+            Interval::MINOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::PERFECT_FIFTH,
+            Interval::MINOR_SIXTH,
+            Interval::MINOR_SEVENTH
+        ],
+        "Phrygian mode - a minor-type scale with a flattened 2nd degree."
+    );
+    implement_tet12_scale!(
+        LocrianScale,
+        7,
+        [
+            Interval::UNISON,
+            Interval::MINOR_SECOND,
+            Interval::MINOR_THIRD,
+            Interval::PERFECT_FOURTH,
+            Interval::TRITONE,
+            Interval::MINOR_SIXTH,
+            Interval::MINOR_SEVENTH
+        ],
+        "Locrian mode - a diminished-type scale with both flattened 2nd and 5th degrees."
+    );
+
+    pub use MajorScale as IonianScale;
+    pub use MinorScale as AeolianScale;
+}
+
+use super::Scale;
+use crate::scales::interval::Interval;
+
+implement_tet12_scale!(
+    ChromaticScale,
+    12,
+    [
+        Interval::UNISON,
+        Interval::MINOR_SECOND,
+        Interval::MAJOR_SECOND,
+        Interval::MINOR_THIRD,
+        Interval::MAJOR_THIRD,
+        Interval::PERFECT_FOURTH,
+        Interval::TRITONE,
+        Interval::PERFECT_FIFTH,
+        Interval::MINOR_SIXTH,
+        Interval::MAJOR_SIXTH,
+        Interval::MINOR_SEVENTH,
+        Interval::MAJOR_SEVENTH
+    ],
+    "Chromatic scale - includes all twelve notes in the octave."
+);
+
+implement_tet12_scale!(
+    WholeToneScale,
+    6,
+    [
+        Interval::UNISON,
+        Interval::MAJOR_SECOND,
+        Interval::MAJOR_THIRD,
+        Interval::AUGMENTED_FOURTH,
+        Interval::AUGMENTED_FIFTH,
+        Interval::AUGMENTED_SIXTH
+    ],
+    "Whole tone scale - consists entirely of whole steps, creating a dreamy, ambiguous sound."
+);
+
+pub use ChromaticScale as TwelveToneScale;

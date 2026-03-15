@@ -47,7 +47,7 @@ pub fn get_custom_source_unpitched(file: &Path, duration_ms: u64) -> SymphoxySou
                     .take_duration(Duration::from_millis(duration_ms)),
             ),
             Err(_) => {
-                eprintln!("Warning: Could not decode audio file {path:?}, using silence");
+                eprintln!("Warning: Could not decode audio file {path:?}. Using silence instead.");
                 Box::new(
                     rodio::source::Zero::<f32>::new(1, 44100)
                         .convert_samples()
@@ -56,7 +56,7 @@ pub fn get_custom_source_unpitched(file: &Path, duration_ms: u64) -> SymphoxySou
             }
         },
         Err(_) => {
-            eprintln!("Warning: Could not find custom source file {path:?}, using silence");
+            eprintln!("Warning: Could not find custom source file {path:?}. Using silence instead.");
             Box::new(
                 rodio::source::Zero::<f32>::new(1, 44100)
                     .convert_samples()

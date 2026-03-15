@@ -1,4 +1,7 @@
-use std::ops::{Add, Mul, Neg, Not};
+use std::{
+    iter::{Product, Sum},
+    ops::{Add, Mul, Neg, Not},
+};
 
 use crate::{
     note::{NoteKind, NoteLength},
@@ -257,6 +260,13 @@ impl Add<Note> for Line {
     }
 }
 
+impl Sum<Note> for Line {
+    #[expect(clippy::arithmetic_side_effects, reason = "Arithmetic implementation")]
+    fn sum<I: Iterator<Item = Note>>(iter: I) -> Self {
+        iter.fold(Line::new(), |line, note| line + note)
+    }
+}
+
 impl Add<Line> for Line {
     type Output = Line;
 
@@ -317,6 +327,13 @@ impl Add<Line> for Line {
             pickup: self.pickup,
             hold_pickup: self.hold_pickup,
         }
+    }
+}
+
+impl Sum<Line> for Line {
+    #[expect(clippy::arithmetic_side_effects, reason = "Arithmetic implementation")]
+    fn sum<I: Iterator<Item = Line>>(iter: I) -> Self {
+        iter.fold(Line::new(), |line, next_line| line + next_line)
     }
 }
 

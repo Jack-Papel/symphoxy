@@ -174,13 +174,14 @@ mod play;
 pub mod scales;
 
 pub use instrument_tools::strings::{Frets, GuitarFrets, GuitarTuning, StringTuning};
-pub use note::chord::{Chord, ChordFluid};
+pub use note::chord::Chord;
 pub use note::{bass, drums, electric_guitar, piano, sine};
 pub use note::{dotted, double_whole, eighth, half, quarter, sixteenth, tie, whole};
 pub use note::{LengthFluid, TimbreFluid};
 pub use note::{Note, NoteKind, NoteLength, NotePitch, Timbre, REST};
 pub use piece::line::Line;
 pub use piece::Piece;
+pub use scales::interval::ChordShape;
 pub use scales::tet12::{get_note_name, get_note_name_with_octave, Tet12, A4, C4};
 pub use scales::Scale;
 

@@ -1,5 +1,6 @@
 use std::ops::Add;
 
+use crate::scales::interval::ChordShape;
 use crate::{Line, Note, NoteKind, NotePitch, Piece, Scale, Tet12, C4};
 
 /// Represents a musical chord - a collection of pitches played simultaneously.
@@ -96,85 +97,6 @@ impl Chord {
         }
         let offset = target.0 / self.0.iter().map(|p| p.0).reduce(f32::min).unwrap();
         Chord(self.0.iter().map(|&pitch| NotePitch(pitch.0 * offset)).collect())
-    }
-
-    /// Creates a chord from a shape defined by semitone offsets from C4.
-    /// C4 is already included, so only the offsets are needed.
-    pub fn shape_from_semitone_offsets<const I: usize>(semitones: [u8; I]) -> Self {
-        let mut out = vec![C4];
-        let pitches = semitones.map(|s| C4.semitone(s as i16));
-        for pitch in pitches {
-            out.push(pitch);
-        }
-        Chord(out)
-    }
-}
-
-/// A trait for types that can be transformed using chord shapes.
-///
-/// This trait enables applying chord structures to musical elements,
-/// typically transposing a chord shape to different root notes.
-pub trait ChordFluid {
-    /// The output type after applying the chord transformation
-    type Output;
-
-    /// Creates a chord with the given shape, transposed so that the lowest pitch of the chord meets the relevant pitch.
-    fn with_chord_shape(self, chord_shape: &Chord) -> Self::Output;
-}
-
-impl ChordFluid for NotePitch {
-    type Output = Chord;
-
-    fn with_chord_shape(self, chord_shape: &Chord) -> Self::Output {
-        chord_shape.transpose_to(self)
-    }
-}
-
-impl ChordFluid for Note {
-    type Output = Piece;
-
-    fn with_chord_shape(self, chord_shape: &Chord) -> Self::Output {
-        match self.1 {
-            NoteKind::Rest => Piece(vec![Line {
-                notes: vec![self],
-                pickup: vec![],
-                hold_pickup: false,
-            }]),
-            NoteKind::Pitched { pitch, timbre, volume } => {
-                let chord = pitch.with_chord_shape(chord_shape);
-
-                Piece(
-                    chord
-                        .0
-                        .into_iter()
-                        .map(|note_pitch| Line {
-                            notes: vec![Note(
-                                self.0,
-                                NoteKind::Pitched {
-                                    pitch: note_pitch,
-                                    timbre,
-                                    volume,
-                                },
-                            )],
-                            pickup: vec![],
-                            hold_pickup: false,
-                        })
-                        .collect(),
-                )
-            }
-        }
-    }
-}
-
-impl ChordFluid for Line {
-    type Output = Piece;
-
-    fn with_chord_shape(self, chord_shape: &Chord) -> Self::Output {
-        self.notes
-            .into_iter()
-            .map(|note| note.with_chord_shape(chord_shape))
-            .reduce(Add::add)
-            .unwrap_or_else(|| Piece(vec![]))
     }
 }
 

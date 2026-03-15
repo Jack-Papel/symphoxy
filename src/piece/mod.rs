@@ -1,5 +1,6 @@
 use std::{
     fmt::Write,
+    iter::Sum,
     ops::{Add, Mul},
 };
 
@@ -209,6 +210,13 @@ impl Add<Piece> for Piece {
     }
 }
 
+impl Sum<Piece> for Piece {
+    #[expect(clippy::arithmetic_side_effects, reason = "Arithmetic implementation")]
+    fn sum<I: Iterator<Item = Piece>>(iter: I) -> Self {
+        iter.reduce(|acc, piece| acc + piece).unwrap_or_else(Piece::new)
+    }
+}
+
 impl Add<Note> for Piece {
     type Output = Piece;
 
@@ -396,5 +404,41 @@ impl std::fmt::Display for Piece {
         }
 
         Ok(())
+    }
+}
+
+pub trait Reversable {
+    fn reverse(self) -> Self;
+}
+
+impl Reversable for Piece {
+    #[expect(clippy::arithmetic_side_effects, reason = "Cannot fail")]
+    #[expect(clippy::cast_possible_truncation, reason = "Should be fine for reasonable piece lengths")]
+    fn reverse(self) -> Self {
+        // First, make every line the same length by padding with rests
+        let mut piece = self;
+
+        let max_length = piece.length();
+        piece.0 = piece
+            .0
+            .into_iter()
+            .map(|line| line.extend((max_length - line.length()) as u16))
+            .collect();
+
+        Piece(piece.0.into_iter().map(|line| line.reverse()).collect())
+    }
+}
+
+impl Reversable for Line {
+    fn reverse(self) -> Self {
+        Line {
+            notes: [
+                self.notes.into_iter().rev().collect::<Vec<_>>(),
+                self.pickup.into_iter().rev().collect::<Vec<_>>(),
+            ]
+            .concat(),
+            pickup: Vec::new(),
+            hold_pickup: false,
+        }
     }
 }

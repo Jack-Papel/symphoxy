@@ -1,9 +1,14 @@
-use crate::{note::NotePitch, scales::tet12::A4};
+use crate::{
+    note::NotePitch,
+    scales::{interval::Interval, tet12::A4},
+};
 
 /// 12-tone equal temperament system and related scales.
 ///
 /// Contains scale implementations and pitch manipulation functions.
 pub mod tet12;
+
+pub mod interval;
 
 pub use tet12::modes::*;
 
@@ -25,6 +30,8 @@ pub use tet12::modes::*;
 /// let triad = c_major.get_degrees([1, 3, 5]); // C-E-G chord
 /// ```
 pub trait Scale {
+    fn intervals() -> &'static [Interval];
+
     /// Gets the pitch at the specified scale degree.
     ///
     /// Scale degrees are typically numbered starting from 1 (the root/tonic).
@@ -60,10 +67,11 @@ pub trait Scale {
     /// let major_seventh = scale.get_degrees([1, 3, 5, 7]); // C-E-G-B
     /// ```
     fn get_degrees<const N: usize>(&self, degrees: [isize; N]) -> [NotePitch; N] {
-        let mut out = [A4; N];
-        for (idx, &degree) in degrees.iter().enumerate() {
-            out[idx] = self.get_degree(degree);
-        }
-        out
+        degrees.map(|degree| self.get_degree(degree))
+    }
+
+    fn get_chord(&self, degrees: &[isize]) -> crate::note::chord::Chord {
+        let pitches = degrees.iter().map(|&degree| self.get_degree(degree)).collect();
+        crate::note::chord::Chord(pitches)
     }
 }
